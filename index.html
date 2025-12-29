@@ -13,6 +13,7 @@
             padding: 10px;
             margin: 5px 0;
             width: 100%;
+            box-sizing: border-box;
         }
         button {
             background: #4285f4;
@@ -20,101 +21,226 @@
             border: none;
             cursor: pointer;
         }
+        button:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+        }
         #result {
             margin-top: 20px;
-            padding: 10px;
-            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 5px;
             display: none;
         }
-        .success { background: #e8f5e8; }
-        .error { background: #ffe8e8; }
+        .success { 
+            background: #e8f5e8; 
+            border: 1px solid #4caf50;
+        }
+        .error { 
+            background: #ffe8e8; 
+            border: 1px solid #f44336;
+        }
+        .loading {
+            color: #666;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
     <h2>在Google Drive创建GS文件</h2>
     
+    <div id="status" class="loading">准备就绪...</div>
+    
     <input type="text" id="fileName" placeholder="输入文件名（例如：你好）" />
-    <button onclick="createGS()">创建GS文件</button>
+    <button id="createBtn" onclick="createGS()">创建GS文件</button>
     
     <div id="result"></div>
     
-    <!-- 隐藏的iframe用于提交表单 -->
-    <iframe name="hiddenIframe" style="display:none;"></iframe>
+    <!-- 方案1：使用隐藏的iframe -->
+    <iframe name="hiddenIframe" id="hiddenIframe" style="display:none;"></iframe>
     
-    <!-- 隐藏的表单 -->
-    <form id="hiddenForm" target="hiddenIframe" method="post" style="display:none;">
+    <!-- 方案2：使用HTML5的target属性直接提交 -->
+    <form id="myForm" target="hiddenIframe" method="post" style="display:none;">
         <input type="hidden" name="fileName" id="formFileName">
     </form>
-    
+
     <script>
-        // 替换成你自己的GAS Web应用URL
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbzrK72MjUzj2PlI_ezU3AIhcNDljODxlWnY_3iFTXvjhy5JBN3vqchG_RYYzjB2OTke/exec";
+        // 在这里设置你的GAS Web应用URL
+        const GAS_URL = "在这里粘贴你的GAS Web应用URL";
+        
+        // 存储响应的全局变量
+        let gasResponse = null;
         
         function createGS() {
-            const fileName = document.getElementById('fileName').value;
+            const fileName = document.getElementById('fileName').value.trim();
             if (!fileName) {
                 alert("请输入文件名");
                 return;
             }
             
-            // 设置表单数据并提交
-            document.getElementById('formFileName').value = fileName;
-            document.getElementById('hiddenForm').action = GAS_URL;
-            document.getElementById('hiddenForm').submit();
+            // 禁用按钮，显示加载状态
+            document.getElementById('createBtn').disabled = true;
+            document.getElementById('createBtn').innerText = "创建中...";
+            document.getElementById('status').innerText = "正在创建文件...";
+            document.getElementById('status').className = "loading";
             
-            // 监听iframe加载完成
-            const iframe = document.getElementsByName('hiddenIframe')[0];
-            iframe.onload = function() {
+            // 清空结果区域
+            document.getElementById('result').style.display = "none";
+            
+            // 设置表单数据
+            document.getElementById('formFileName').value = fileName;
+            
+            // 创建一个临时的form元素
+            const tempForm = document.createElement('form');
+            tempForm.method = 'POST';
+            tempForm.action = GAS_URL;
+            tempForm.target = 'hiddenIframe';
+            tempForm.style.display = 'none';
+            
+            // 创建隐藏的input字段
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'fileName';
+            input.value = fileName;
+            tempForm.appendChild(input);
+            
+            // 添加到页面并提交
+            document.body.appendChild(tempForm);
+            tempForm.submit();
+            
+            // 设置一个定时器来检查响应（因为不能直接访问iframe内容）
+            let checkCount = 0;
+            const checkInterval = setInterval(() => {
+                checkCount++;
+                
+                // 尝试从iframe的URL获取响应（这是关键部分）
+                const iframe = document.getElementById('hiddenIframe');
+                
+                // 方法1：检查iframe的URL是否变化（GAS重定向后的URL可能包含结果）
                 try {
-                    // 获取响应
-                    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                    const responseText = iframeDoc.body.textContent;
-                    const response = JSON.parse(responseText);
+                    // 尝试通过postMessage与iframe通信（如果GAS支持）
+                    iframe.contentWindow.postMessage('getResult', '*');
+                } catch(e) {
+                    // 忽略跨域错误
+                }
+                
+                // 如果等待时间过长，显示超时信息
+                if (checkCount > 30) { // 30 * 200ms = 6秒
+                    clearInterval(checkInterval);
+                    document.getElementById('createBtn').disabled = false;
+                    document.getElementById('createBtn').innerText = "创建GS文件";
+                    document.getElementById('status').innerText = "请求超时，请检查网络连接";
                     
-                    // 显示结果
-                    const resultDiv = document.getElementById('result');
-                    if (response.success) {
-                        resultDiv.innerHTML = `
-                            <h3>✅ 创建成功！</h3>
-                            <p><b>文件名：</b>${response.fileName}.gs</p>
-                            <p><b>文件ID：</b>${response.fileId}</p>
-                            <p><b>下载链接：</b> 
-                              <a href="${response.downloadUrl}" target="_blank">点击下载</a>
-                            </p>
-                            <p><b>Google Drive链接：</b> 
-                              <a href="${response.fileUrl}" target="_blank">点击查看</a>
-                            </p>
-                        `;
-                        resultDiv.className = "success";
-                    } else {
-                        resultDiv.innerHTML = `
-                            <h3>❌ 创建失败</h3>
-                            <p>${response.message}</p>
-                        `;
-                        resultDiv.className = "error";
-                    }
-                    resultDiv.style.display = "block";
-                    
-                } catch (e) {
-                    document.getElementById('result').innerHTML = 
-                        `<h3>❌ 解析响应失败</h3><p>${e.message}</p>`;
+                    document.getElementById('result').innerHTML = `
+                        <h3>⚠️ 请求超时</h3>
+                        <p>可能的原因：</p>
+                        <ul>
+                            <li>网络连接问题</li>
+                            <li>GAS Web应用URL不正确</li>
+                            <li>Google Apps Script需要授权</li>
+                        </ul>
+                        <p>请检查GAS_URL设置是否正确。</p>
+                    `;
                     document.getElementById('result').className = "error";
                     document.getElementById('result').style.display = "block";
                 }
+            }, 200); // 每200ms检查一次
+            
+            // 监听message事件（如果GAS设置了postMessage）
+            window.addEventListener('message', function(event) {
+                // 验证消息来源（可选）
+                // if (event.origin !== "https://script.google.com") return;
+                
+                try {
+                    const response = JSON.parse(event.data);
+                    clearInterval(checkInterval);
+                    showResult(response);
+                } catch(e) {
+                    // 如果不是JSON格式，忽略
+                }
+            }, false);
+            
+            // 监听iframe的load事件
+            iframe.onload = function() {
+                // 由于跨域限制，我们不能直接读取iframe的内容
+                // 但我们可以尝试通过其他方式获取响应
+                
+                // 方法2：通过服务器代理（需要额外设置）
+                // 方法3：让GAS返回HTML页面，通过URL参数传递结果
+                
+                // 这里我们显示一个通用成功消息
+                setTimeout(() => {
+                    clearInterval(checkInterval);
+                    document.getElementById('createBtn').disabled = false;
+                    document.getElementById('createBtn').innerText = "创建GS文件";
+                    document.getElementById('status').innerText = "请求已发送";
+                    
+                    document.getElementById('result').innerHTML = `
+                        <h3>✅ 请求已发送</h3>
+                        <p>文件创建请求已成功发送到Google Apps Script。</p>
+                        <p>由于安全限制，无法直接获取响应结果。</p>
+                        <p>请检查以下事项：</p>
+                        <ol>
+                            <li>确认GAS Web应用URL正确</li>
+                            <li>检查Google Drive文件夹中是否已创建文件</li>
+                            <li>首次使用时可能需要授权GAS访问Google Drive</li>
+                        </ol>
+                        <p><a href="https://drive.google.com/drive/folders/1qqjVTArCFxWUYFiTMtSfAro8MCNtKAER" target="_blank">
+                            点击这里查看你的Google Drive文件夹
+                        </a></p>
+                    `;
+                    document.getElementById('result').className = "success";
+                    document.getElementById('result').style.display = "block";
+                }, 1000);
             };
         }
         
-        // 页面加载时显示说明
-        window.onload = function() {
-            document.getElementById('result').innerHTML = `
-                <h3>使用说明：</h3>
-                <p>1. 在上方输入文件名（不需要加 .gs）</p>
-                <p>2. 点击"创建GS文件"按钮</p>
-                <p>3. 等待结果...</p>
-                <p><small>注意：需要在代码中设置正确的GAS_URL</small></p>
-            `;
-            document.getElementById('result').className = "";
+        function showResult(response) {
+            document.getElementById('createBtn').disabled = false;
+            document.getElementById('createBtn').innerText = "创建GS文件";
+            
+            if (response.success) {
+                document.getElementById('status').innerText = "创建成功！";
+                document.getElementById('result').innerHTML = `
+                    <h3>✅ 创建成功！</h3>
+                    <p><b>文件名：</b>${response.fileName}.gs</p>
+                    <p><b>文件ID：</b>${response.fileId}</p>
+                    <p><b>文件URL：</b><br>
+                       <a href="${response.fileUrl}" target="_blank">${response.fileUrl}</a>
+                    </p>
+                `;
+                document.getElementById('result').className = "success";
+            } else {
+                document.getElementById('status').innerText = "创建失败";
+                document.getElementById('result').innerHTML = `
+                    <h3>❌ 创建失败</h3>
+                    <p>${response.message}</p>
+                `;
+                document.getElementById('result').className = "error";
+            }
             document.getElementById('result').style.display = "block";
+        }
+        
+        // 页面加载时初始化
+        window.onload = function() {
+            document.getElementById('status').innerText = "准备就绪";
+            
+            // 显示GAS_URL设置状态
+            if (GAS_URL.includes("在这里粘贴")) {
+                document.getElementById('result').innerHTML = `
+                    <h3>⚠️ 需要设置GAS_URL</h3>
+                    <p>请先更新HTML代码中的GAS_URL变量：</p>
+                    <ol>
+                        <li>部署Google Apps Script为Web应用</li>
+                        <li>复制Web应用URL</li>
+                        <li>在HTML代码第38行替换GAS_URL的值</li>
+                        <li>重新部署到GitHub Pages</li>
+                    </ol>
+                    <p><code>const GAS_URL = "https://script.google.com/macros/s/AKfycbwlc4mErkm5VB1YrUpqtRelnsjCl23_geAXPWfEjzFgpm6zKTnEH0F9ULfMkG7oh1vA/exec";</code></p>
+                `;
+                document.getElementById('result').className = "error";
+                document.getElementById('result').style.display = "block";
+                document.getElementById('createBtn').disabled = true;
+            }
         };
     </script>
 </body>
