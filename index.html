@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>创建Google Apps Script文件</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .container {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            margin-top: 30px;
+        }
+        
+        h1 {
+            color: #1a73e8;
+            margin-bottom: 20px;
+            text-align: center;
+            border-bottom: 2px solid #e8f0fe;
+            padding-bottom: 15px;
+        }
+        
+        h2 {
+            color: #5f6368;
+            margin: 25px 0 15px;
+            font-size: 1.3rem;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #3c4043;
+        }
+        
+        input[type="text"] {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #dadce0;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: border-color 0.2s;
+        }
+        
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #1a73e8;
+            box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
+        }
+        
+        .btn {
+            display: inline-block;
+            background-color: #1a73e8;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            width: 100%;
+            margin-top: 10px;
+        }
+        
+        .btn:hover {
+            background-color: #0d62d9;
+        }
+        
+        .btn:disabled {
+            background-color: #a8c7fa;
+            cursor: not-allowed;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .result {
+            margin-top: 25px;
+            padding: 20px;
+            border-radius: 6px;
+            background-color: #f8f9fa;
+            border-left: 4px solid #1a73e8;
+        }
+        
+        .success {
+            background-color: #e6f4ea;
+            border-left-color: #34a853;
+        }
+        
+        .error {
+            background-color: #fce8e6;
+            border-left-color: #ea4335;
+        }
+        
+        .info-box {
+            background-color: #e8f0fe;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 25px;
+            border-left: 4px solid #1a73e8;
+        }
+        
+        .step {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .step-number {
+            background-color: #1a73e8;
+            color: white;
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 10px;
+            font-weight: bold;
+        }
+        
+        code {
+            background-color: #f1f3f4;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            color: #d93025;
+        }
+        
+        .url-input {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .url-input input {
+            flex-grow: 1;
+        }
+        
+        .url-input button {
+            background-color: #5f6368;
+            padding: 0 15px;
+            white-space: nowrap;
+        }
+        
+        #responseDetails {
+            margin-top: 15px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            overflow-x: auto;
+        }
+        
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            
+            .container {
+                padding: 20px;
+            }
+            
+            .url-input {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>创建Google Apps Script文件</h1>
+        
+        <div class="info-box">
+            <h2>使用说明</h2>
+            <p>通过此页面可以在Google Drive中创建Google Apps Script文件，并获取新文件的ID。</p>
+            <div class="step">
+                <div class="step-number">1</div>
+                <div>部署Google Apps Script后端并获取Web应用URL</div>
+            </div>
+            <div class="step">
+                <div class="step-number">2</div>
+                <div>在下方输入Web应用URL和文件名</div>
+            </div>
+            <div class="step">
+                <div class="step-number">3</div>
+                <div>点击"创建GS文件"按钮</div>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label for="gasUrl">Google Apps Script Web应用URL:</label>
+            <div class="url-input">
+                <input type="text" id="gasUrl" placeholder="https://script.google.com/macros/s/AKfycbyFIRQX91flUlo6DkJlIeB8PlDc16bCRsKoXz4zgz0Wm6FFYILUb52IcibJU0Fp-w4/exec">
+                <button type="button" id="saveUrl" class="btn">保存URL</button>
+            </div>
+            <small>此URL将保存在本地浏览器中，下次使用时无需重新输入</small>
+        </div>
+        
+        <form id="createForm" target="hiddenFrame">
+            <div class="form-group">
+                <label for="fileName">GS文件名:</label>
+                <input type="text" id="fileName" name="fileName" placeholder="例如: 我的新脚本" required>
+            </div>
+            
+            <button type="submit" id="submitBtn" class="btn">创建GS文件</button>
+        </form>
+        
+        <!-- 隐藏的iframe用于form提交 -->
+        <iframe name="hiddenFrame" class="hidden"></iframe>
+        
+        <div id="resultContainer" class="hidden">
+            <h2>创建结果</h2>
+            <div id="resultMessage" class="result"></div>
+            
+            <div id="responseDetailsContainer" class="hidden">
+                <h3>响应详情:</h3>
+                <div id="responseDetails"></div>
+            </div>
+        </div>
+        
+        <div class="info-box">
+            <h2>技术说明</h2>
+            <p>此演示使用以下技术：</p>
+            <ul>
+                <li>HTML表单通过隐藏iframe提交到Google Apps Script</li>
+                <li>Google Apps Script处理请求并创建新脚本文件</li>
+                <li>响应通过iframe加载，JavaScript解析后显示结果</li>
+                <li>由于Google Apps Script API权限限制，此演示使用模拟ID</li>
+                <li>实际生产环境需要实现完整的Google Apps Script API集成</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // DOM元素
+        const gasUrlInput = document.getElementById('gasUrl');
+        const saveUrlBtn = document.getElementById('saveUrl');
+        const createForm = document.getElementById('createForm');
+        const fileNameInput = document.getElementById('fileName');
+        const submitBtn = document.getElementById('submitBtn');
+        const resultContainer = document.getElementById('resultContainer');
+        const resultMessage = document.getElementById('resultMessage');
+        const responseDetailsContainer = document.getElementById('responseDetailsContainer');
+        const responseDetails = document.getElementById('responseDetails');
+        const hiddenFrame = document.getElementsByName('hiddenFrame')[0];
+        
+        // 从本地存储加载保存的GAS URL
+        function loadSavedUrl() {
+            const savedUrl = localStorage.getItem('gasWebAppUrl');
+            if (savedUrl) {
+                gasUrlInput.value = savedUrl;
+                updateFormAction(savedUrl);
+            }
+        }
+        
+        // 保存GAS URL到本地存储
+        function saveUrl() {
+            const url = gasUrlInput.value.trim();
+            if (url) {
+                localStorage.setItem('gasWebAppUrl', url);
+                updateFormAction(url);
+                showNotification('URL已保存', 'success');
+            } else {
+                showNotification('请输入有效的URL', 'error');
+            }
+        }
+        
+        // 更新表单的action属性
+        function updateFormAction(url) {
+            createForm.action = url;
+            console.log('表单action已更新为:', url);
+        }
+        
+        // 显示通知
+        function showNotification(message, type = 'info') {
+            // 创建临时通知元素
+            const notification = document.createElement('div');
+            notification.textContent = message;
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 15px 20px;
+                border-radius: 6px;
+                color: white;
+                font-weight: 600;
+                z-index: 1000;
+                animation: fadeIn 0.3s, fadeOut 0.3s 2.7s;
+                max-width: 300px;
+            `;
+            
+            if (type === 'success') {
+                notification.style.backgroundColor = '#34a853';
+            } else if (type === 'error') {
+                notification.style.backgroundColor = '#ea4335';
+            } else {
+                notification.style.backgroundColor = '#1a73e8';
+            }
+            
+            document.body.appendChild(notification);
+            
+            // 3秒后移除通知
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 3000);
+        }
+        
+        // 处理表单提交
+        function handleFormSubmit(e) {
+            e.preventDefault();
+            
+            const url = gasUrlInput.value.trim();
+            const fileName = fileNameInput.value.trim();
+            
+            if (!url) {
+                showNotification('请输入Google Apps Script Web应用URL', 'error');
+                return;
+            }
+            
+            if (!fileName) {
+                showNotification('请输入文件名', 'error');
+                return;
+            }
+            
+            // 禁用提交按钮
+            submitBtn.disabled = true;
+            submitBtn.textContent = '创建中...';
+            
+            // 隐藏之前的结果
+            resultContainer.classList.add('hidden');
+            responseDetailsContainer.classList.add('hidden');
+            
+            // 设置表单action并提交
+            updateFormAction(url);
+            
+            // 显示加载状态
+            resultContainer.classList.remove('hidden');
+            resultMessage.textContent = '正在创建Google Apps Script文件...';
+            resultMessage.className = 'result';
+            
+            // 监听iframe加载完成
+            hiddenFrame.onload = function() {
+                try {
+                    // 获取iframe的内容
+                    const iframeDoc = hiddenFrame.contentDocument || hiddenFrame.contentWindow.document;
+                    const responseText = iframeDoc.body.textContent;
+                    
+                    console.log('响应:', responseText);
+                    
+                    // 解析响应
+                    let response;
+                    try {
+                        response = JSON.parse(responseText);
+                    } catch (e) {
+                        // 如果不是JSON，尝试从文本中提取信息
+                        response = {
+                            success: false,
+                            message: '无法解析响应，可能是CORS错误或响应格式不正确'
+                        };
+                    }
+                    
+                    // 显示结果
+                    if (response.success) {
+                        resultMessage.innerHTML = `
+                            <h3>✅ 创建成功!</h3>
+                            <p><strong>文件名:</strong> ${response.fileName}</p>
+                            <p><strong>脚本ID:</strong> ${response.scriptId}</p>
+                            <p><strong>脚本URL:</strong> <a href="${response.scriptUrl}" target="_blank">${response.scriptUrl}</a></p>
+                            <p><strong>消息:</strong> ${response.message}</p>
+                        `;
+                        resultMessage.className = 'result success';
+                        
+                        // 显示响应详情
+                        responseDetails.textContent = JSON.stringify(response, null, 2);
+                        responseDetailsContainer.classList.remove('hidden');
+                    } else {
+                        resultMessage.innerHTML = `
+                            <h3>❌ 创建失败</h3>
+                            <p><strong>错误:</strong> ${response.message}</p>
+                            <p>请检查Google Apps Script URL是否正确，以及脚本是否已部署为Web应用。</p>
+                        `;
+                        resultMessage.className = 'result error';
+                    }
+                    
+                } catch (error) {
+                    console.error('处理响应时出错:', error);
+                    resultMessage.innerHTML = `
+                        <h3>❌ 处理响应时出错</h3>
+                        <p><strong>错误:</strong> ${error.message}</p>
+                        <p>这可能是因为CORS限制或网络错误。请确保Google Apps Script已正确部署。</p>
+                    `;
+                    resultMessage.className = 'result error';
+                }
+                
+                // 重新启用提交按钮
+                submitBtn.disabled = false;
+                submitBtn.textContent = '创建GS文件';
+                
+                // 移除iframe事件监听器
+                hiddenFrame.onload = null;
+            };
+            
+            // 提交表单
+            createForm.submit();
+        }
+        
+        // 初始化
+        function init() {
+            // 加载保存的URL
+            loadSavedUrl();
+            
+            // 绑定事件监听器
+            saveUrlBtn.addEventListener('click', saveUrl);
+            createForm.addEventListener('submit', handleFormSubmit);
+            
+            // 如果URL字段变化，自动更新表单action
+            gasUrlInput.addEventListener('change', function() {
+                if (gasUrlInput.value.trim()) {
+                    updateFormAction(gasUrlInput.value.trim());
+                }
+            });
+            
+            // 添加CSS动画
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes fadeIn {
+                    from { opacity: 0; transform: translateY(-10px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                
+                @keyframes fadeOut {
+                    from { opacity: 1; transform: translateY(0); }
+                    to { opacity: 0; transform: translateY(-10px); }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
